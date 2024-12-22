@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 #include <sstream>
-
+#include <bits/stdc++.h>
 
 /*
 Written by Govind S Ashan (ME23B168)
@@ -93,7 +93,7 @@ class Broker;
 class Publisher {
 protected:
     std::unordered_map<std::uint64_t, Message> instrumentData_; // Last Received Message for each instrumentID, Map (InstrumentID, Message)
-    std::unordered_map<std::uint64_t, std::uint64_t> instrumentSubscribers_; // Map (SubscriberID, InstrumentID)
+    std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> instrumentSubscribers_; // Map (SubscriberID, InstrumentID)
 
 public:
     virtual ~Publisher() = default;
@@ -191,7 +191,10 @@ public:
 
 // Maps SubscriberID to InstrumentID in the respective Publisher
 void Publisher::subscribe(std::uint64_t instrumentId, Subscriber* subscriber) {
-    instrumentSubscribers_[subscriber->get_id()] = instrumentId;
+    auto& instrumentIDs = instrumentSubscribers_[subscriber->get_id()]; // Access or create the vector
+    if (std::find(instrumentIDs.begin(), instrumentIDs.end(), instrumentId) == instrumentIDs.end()) {
+        instrumentIDs.push_back(instrumentId); // Add only if not already subscribed
+    }
 }
 
 // Latest data corresponding to the InstrumentID is procured
@@ -234,21 +237,25 @@ public:
         
         if (equityPublisher.is_valid_instrument(instrumentId)) {
             auto it = equityPublisher.get_instrumentSubscribers().find(id_);
-            if (it != equityPublisher.get_instrumentSubscribers().end() && it->second == instrumentId) {
-                equityPublisher.get_data(instrumentId, data);
-                std::cout << "F," << id_ << "," << instrumentId << "," << data.lastTradedPrice << "," << data.lastDayVolume << "\n";
-                ++requestCount_;
-                return true;
+            if (it != equityPublisher.get_instrumentSubscribers().end() ) {
+                if (std::find(it->second.begin(),it->second.end(),instrumentId)!=it->second.end()) {
+                    equityPublisher.get_data(instrumentId, data);
+                    std::cout << "F," << id_ << "," << instrumentId << "," << data.lastTradedPrice << "," << data.lastDayVolume << "\n";
+                    ++requestCount_;
+                    return true;
+                }
             }
         }
 
         else if (bondPublisher.is_valid_instrument(instrumentId)) {
             auto it = bondPublisher.get_instrumentSubscribers().find(id_);
-            if (it != bondPublisher.get_instrumentSubscribers().end() && it->second == instrumentId) {
-                bondPublisher.get_data(instrumentId, data);
-                std::cout << "F," << id_ << "," << instrumentId << "," << data.lastTradedPrice << "," << data.bondYield << "\n";
-                ++requestCount_;
-                return true;
+            if (it != bondPublisher.get_instrumentSubscribers().end()) {
+                if (std::find(it->second.begin(), it->second.end(), instrumentId) != it->second.end()) {
+                    bondPublisher.get_data(instrumentId, data);
+                    std::cout << "F," << id_ << "," << instrumentId << "," << data.lastTradedPrice << "," << data.bondYield << "\n";
+                    ++requestCount_;
+                    return true;
+                }
             }       
         }
         broker_.err_msg('F',id_,instrumentId);
@@ -270,19 +277,23 @@ public:
 
         if (equityPublisher.is_valid_instrument(instrumentId)) {
             auto it = equityPublisher.get_instrumentSubscribers().find(id_);
-            if (it != equityPublisher.get_instrumentSubscribers().end() && it->second == instrumentId) {
-                equityPublisher.get_data(instrumentId, data);
-                std::cout << "F," << id_ << "," << instrumentId << "," << data.lastTradedPrice << "," << data.lastDayVolume << "\n";
-                return true;
+            if (it != equityPublisher.get_instrumentSubscribers().end()) {
+                if (std::find(it->second.begin(),it->second.end(),instrumentId) != it->second.end()) {
+                    equityPublisher.get_data(instrumentId, data);
+                    std::cout << "F," << id_ << "," << instrumentId << "," << data.lastTradedPrice << "," << data.lastDayVolume << "\n";
+                    return true;
+                }
             }
         }
 
         else if (bondPublisher.is_valid_instrument(instrumentId)) {
             auto it = bondPublisher.get_instrumentSubscribers().find(id_);
-            if (it != bondPublisher.get_instrumentSubscribers().end() && it->second == instrumentId) {
-                bondPublisher.get_data(instrumentId, data);
-                std::cout << "F," << id_ << "," << instrumentId << "," << data.lastTradedPrice << "," << data.bondYield << "\n";
-                return true;
+            if (it != bondPublisher.get_instrumentSubscribers().end()) {
+                if (std::find(it->second.begin(), it->second.end(), instrumentId) != it->second.end()) {
+                    bondPublisher.get_data(instrumentId, data);
+                    std::cout << "F," << id_ << "," << instrumentId << "," << data.lastTradedPrice << "," << data.bondYield << "\n";
+                    return true;
+                }
             }       
         }
 
